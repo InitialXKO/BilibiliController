@@ -31,7 +31,7 @@ function connectWebSocket() {
           });
         }
         return;
-      } else if (data.type == "update_video_status") {
+      } else {
         chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
             if (tabs.length == 0) return;
             const tab = tabs[0];

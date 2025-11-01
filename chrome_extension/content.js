@@ -272,7 +272,6 @@ picker.selectors = [
   "div.video-page-card-small a[href^=\"/video\"]:has(.title)"
 ];
 picker.show();
-// picker.handleKeyDown();
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   console.log("Received message in content script:", msg);
@@ -296,6 +295,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       {
         video.playbackRate = newConfig.playbackRate;
       }
+    }
+  } else if (msg.type == "remote_control_key") {
+    let command = msg.data;
+    if (command === "Enter") {
+      picker.enterHit();
+    } else if (command == "ArrowUp") {
+      picker.moveNext("up");
+    } else if (command == "ArrowDown") {
+      picker.moveNext("down");
+    } else if (command == "ArrowLeft") {
+      picker.moveNext("left");
+    } else if (command == "ArrowRight") {
+      picker.moveNext("right");
     }
   }
 });

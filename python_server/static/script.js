@@ -79,6 +79,38 @@ document.getElementById("volumeSlider").addEventListener("input", (event) => {
   }
 });
 
+document.querySelectorAll(".remote-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    console.log(`Pressed: ${btn.id}`);
+    var command = "ArrowDown";
+    switch (btn.id) {
+      case "btn-up":
+        command = "ArrowUp";
+        break;
+      case "btn-down":
+        command = "ArrowDown";
+        break;
+      case "btn-left":
+        command = "ArrowLeft";
+        break;
+      case "btn-right":
+        command = "ArrowRight";
+        break;
+      case "btn-enter":
+        command = "Enter";
+        break;
+    }
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: "remote_control_key",
+        data: command
+      }));
+    }
+  });
+});
+
 function onReceiveMessage(line) {
   const box = document.getElementById("messageBox");
   const msg = document.createElement("div");
