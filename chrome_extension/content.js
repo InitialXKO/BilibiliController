@@ -79,6 +79,24 @@ function parseAndApplyScript(video, script) {
 }
 
 // Picker.js
+function performMouseEnter(element) {
+  const mouseenter = new MouseEvent("mouseenter", {
+    bubbles: true,
+    cancelable: true,
+    view: window
+  });
+  element.dispatchEvent(mouseenter);
+}
+
+function performMouseOut(element) {
+  const mouseleave = new MouseEvent("mouseleave", {
+    bubbles: true,
+    cancelable: true,
+    view: window
+  });
+  element.dispatchEvent(mouseleave);
+}
+
 class ElementNavigator {
   constructor() {
     this._selectors = [];
@@ -128,6 +146,8 @@ class ElementNavigator {
       const cands = this._getCandidates();
       if (cands.length) {
         this.selectedElement = cands[0];
+        performMouseEnter(this.selectedElement);
+        this.rebuildNeighborMap();
         this.selectedElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
         this._updateHighlightBox();
       }
@@ -135,10 +155,25 @@ class ElementNavigator {
     }
     const next = this._findNextElementO1(this.selectedElement, direction);
     if (next) {
+      // reset hover state
+      if (this.shouldPerformMouseOut(this.selectedElement, next)) {
+        performMouseOut(this.selectedElement);
+      }
+
+      performMouseEnter(next);
+      this.rebuildNeighborMap();
       this.selectedElement = next;
       this.selectedElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
       this._updateHighlightBox();
     }
+  }
+
+  shouldPerformMouseOut(previousElement, nextElement) {
+    // Bilibili 动态栏特殊处理
+    if (nextElement.closest(".dynamic-info-content")) {
+      return false;
+    }
+    return true;
   }
 
   /** Perform click on current element */
@@ -269,6 +304,9 @@ class ElementNavigator {
 }
 var picker = new ElementNavigator();
 picker.selectors = [
+  "div#biliMainHeader ul.left-entry li.v-popover-wrap a.default-entry span",
+  "div#biliMainHeader ul.right-entry li.v-popover-wrap a.right-entry__outside",
+  "#biliHeaderDynScrollCon div.header-content-panel div.header-dynamic__box--center div.dynamic-info-content div",
   "div.video-page-card-small a[href^=\"/video\"]:has(.title)"
 ];
 picker.show();
