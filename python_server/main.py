@@ -73,5 +73,5 @@ if __name__ == '__main__':
     app.router.add_get('/controller', controller_handler)
     app.router.add_static('/static/', path='./static', name='static')
 
-    port = int(os.environ.get('PORT', 8080))
+    port = int(os.environ.get('PORT', 5000))
     web.run_app(app, port=port)
