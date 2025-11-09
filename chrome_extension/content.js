@@ -208,12 +208,28 @@ class ElementNavigator {
   }
 
   _getCandidates() {
-    return Array.from(document.querySelectorAll(this.selectors.join(",")))
+    return this.selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)))
       .filter(el => {
         const r = el.getBoundingClientRect();
         const style = window.getComputedStyle(el);
         return r.width > 0 && r.height > 0 && style.visibility !== "hidden";
       });
+  }
+
+  showAllCandidates() {
+    const cands = this._getCandidates();
+    cands.forEach(el => {
+      el.style.outline = "2px solid red";
+      el.style.fontStyle = "italic";
+    });
+  }
+
+  unshowAllCandidates() {
+    const cands = this._getCandidates();
+    cands.forEach(el => {
+      el.style.outline = "";
+      el.style.fontStyle = "";
+    });
   }
 
   _rectOf(el) {
@@ -243,47 +259,20 @@ class ElementNavigator {
     this.highlightBox.style.display = "block";
   }
 
-  // Build neighbor map for O(1) navigation
+  // simple implementation: linear neighbor map
   rebuildNeighborMap() {
     this.neighborMap.clear();
     const cands = this._getCandidates();
-    const rects = new Map(cands.map(el => [el, this._rectOf(el)]));
-
-    for (const from of cands) {
-      const rf = rects.get(from);
-      let best = { up: null, down: null, left: null, right: null };
-      let scoreBest = { up: Infinity, down: Infinity, left: Infinity, right: Infinity };
-
-      for (const to of cands) {
-        if (to === from) continue;
-        const rt = rects.get(to);
-
-        const horizOverlap = !(rf.right < rt.left || rt.right < rf.left);
-        const vertOverlap = !(rf.bottom < rt.top || rt.bottom < rf.top);
-
-        const scoreRight = (rt.left - rf.right) * 1000 + Math.abs(rt.cy - rf.cy);
-        const scoreLeft  = (rf.left - rt.right) * 1000 + Math.abs(rt.cy - rf.cy);
-        const scoreDown  = (rt.top - rf.bottom) * 1000 + Math.abs(rt.cx - rf.cx);
-        const scoreUp    = (rf.top - rt.bottom) * 1000 + Math.abs(rt.cx - rf.cx);
-
-        if (rt.left >= rf.right && scoreRight < scoreBest.right) {
-          scoreBest.right = scoreRight + (vertOverlap ? 0 : 500000);
-          best.right = to;
-        }
-        if (rt.right <= rf.left && scoreLeft < scoreBest.left) {
-          scoreBest.left = scoreLeft + (vertOverlap ? 0 : 500000);
-          best.left = to;
-        }
-        if (rt.top >= rf.bottom && scoreDown < scoreBest.down) {
-          scoreBest.down = scoreDown + (horizOverlap ? 0 : 500000);
-          best.down = to;
-        }
-        if (rt.bottom <= rf.top && scoreUp < scoreBest.up) {
-          scoreBest.up = scoreUp + (horizOverlap ? 0 : 500000);
-          best.up = to;
-        }
-      }
-      this.neighborMap.set(from, best);
+    for (var index = 0; index < cands.length; index++) {
+      const el = cands[index];
+      const next = index+1 < cands.length ? cands[index+1] : null;
+      const prev = index-1 >= 0 ? cands[index-1] : null;
+      this.neighborMap.set(el, {
+        left: prev,
+        right: next,
+        up: prev,
+        down: next
+      });
     }
   }
 
