@@ -1,42 +1,32 @@
-# Bilibili 遥控器
+# Bilibili Remote Control (WebRTC Version)
 
-> 电视机接上电脑，打开 B 站，躺在沙发，想视频快进？你需要 "Bilibili 遥控器"
+> Control Bilibili videos from your phone with zero setup. Just scan a QR code!
 
 ![demo](misc/demo.png)
 
-## Step
+## How It Works
 
-1. install chrome_extension in Chrome/Edge
+This extension turns your phone into a remote control for the Bilibili video player running on your computer. It uses an innovative **WebRTC + QR Code** architecture to create a direct, peer-to-peer connection between your phone and your browser, eliminating the need for a separate server, firewall configurations, or manual IP address entry.
 
-```
-chrome://extesions => "Developer mode" => "Load unpacked" => select the folder of chrome_extension/
-```
+The key features of this new design are:
+- **Zero-Configuration Setup**: No more Python servers or Docker containers. The extension is entirely self-contained.
+- **Micro Signaling Server**: A temporary, lightweight signaling server runs inside the extension's service worker to facilitate the initial WebRTC handshake.
+- **Scan-and-Go**: Simply click the extension icon, scan the generated QR code with your phone, and the remote is instantly connected.
 
-2. run python_server in your computer
+## Installation and Usage
 
-```
-docker-compose up --build
-```
+1.  **Load the Chrome Extension:**
+    -   Open Chrome and navigate to `chrome://extensions`.
+    -   Enable "Developer mode".
+    -   Click "Load unpacked" and select the `chrome_extension/` directory.
 
-3. Firewall, allow port 5000
+2.  **Connect Your Phone:**
+    -   Navigate to a Bilibili video page.
+    -   Click the Bilibili Remote Control extension icon in your toolbar.
+    -   A popup with a QR code will appear automatically.
 
-```
-Press Win key
-=> "Windows Defender Firewall with Advanced Security"
-=> "Inbound Rules"
-=> "New Rule"
-=> "Port", "5000", "Allow the connection", "Private" Only!!!
-```
+3.  **Connect Your Phone:**
+    -   Scan the QR code with your phone's camera.
+    -   A web-based remote control will open in your phone's browser, instantly connected to the video player.
 
-4. Try in your phone!
-
-* first, find your computer ip => `ipconfig`, e.g. 192.168.1.2
-* In your Phone, visit `http://<your computer ip>:5000`, e.g. "http://192.168.1.2:5000"
-
-
-## Yet Another Bilibili Controller
-
-> 明明有 Bilibili 自己的投屏软件了，为啥要做这个
-
-* 家里电视比较老，不支持 Bilibili 投屏。。。
-* 通道建好了，之后可以自定义功能啦
+Now you can control the video from your phone!
