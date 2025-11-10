@@ -43,6 +43,10 @@ async function handleAnswer(request) {
       await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       console.log('WebRTC connection established!');
       connectionState = 'connected';
+      // Inform content script of successful connection
+      chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+        tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'connection-successful' }));
+      });
     }
     return new Response(JSON.stringify({ status: 'connected' }), {
       headers: { 'Content-Type': 'application/json' },
@@ -94,6 +98,11 @@ async function startWebRTCConnection() {
   peerConnection.onicecandidate = (event) => {
     if (event.candidate === null) {
       localOffer = peerConnection.localDescription;
+      const qrUrl = `http://${localIp}:${PORT}/mobile.html`;
+      // Send QR code url to content script
+      chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+        tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'show-qr-code', url: qrUrl }));
+      });
     }
   };
 
@@ -105,6 +114,10 @@ function setupDataChannelListeners() {
   dataChannel.onopen = () => {
     console.log('Data channel is open');
     connectionState = 'connected';
+    // Inform content script of successful connection
+    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'connection-successful' }));
+    });
   };
   dataChannel.onclose = () => {
     console.log('Data channel is closed');

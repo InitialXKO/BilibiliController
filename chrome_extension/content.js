@@ -1,3 +1,44 @@
+// QR Code and FAB Management
+let qrContainer;
+let fab;
+
+function createUI() {
+  // QR Code container
+  qrContainer = document.createElement('div');
+  qrContainer.id = 'bilibili-remote-qr-container';
+  qrContainer.style.display = 'none';
+  document.body.appendChild(qrContainer);
+
+  // Floating Action Button
+  fab = document.createElement('div');
+  fab.id = 'bilibili-remote-fab';
+  fab.textContent = 'QR';
+  fab.addEventListener('click', () => {
+    if (qrContainer.style.display === 'none') {
+      qrContainer.style.display = 'block';
+    } else {
+      qrContainer.style.display = 'none';
+    }
+  });
+  document.body.appendChild(fab);
+}
+
+function showQRCode(url) {
+  qrContainer.innerHTML = '';
+  new QRCode(qrContainer, {
+    text: url,
+    width: 256,
+    height: 256,
+  });
+  qrContainer.style.display = 'block';
+}
+
+function hideQRCode() {
+  qrContainer.style.display = 'none';
+}
+
+createUI();
+
 // interval to update video status
 function getVideoStatus() {
   const video = document.querySelector(".bpx-player-video-wrap video");
@@ -392,6 +433,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     } else {
       sendResponse({ success: false, error: "No video element found" });
     }
+  } else if (msg.type === 'show-qr-code') {
+    showQRCode(msg.url);
+  } else if (msg.type === 'connection-successful') {
+    hideQRCode();
   } else if (msg.type == "update_video_status") {
     const video = document.querySelector(".bpx-player-video-wrap video");
     if (video) {
