@@ -1,8 +1,8 @@
 export const defaultConfig = {
-  remotePageUrl: "__REMOTE_PAGE_URL__",
-  claimUrl: "__CLAIM_URL__",
+  remotePageUrl: "",
+  claimUrl: "",
   claimed: false,
-  claimExpiresAt: 0
+  claimExpiresAt: 1788112163468
 };
 
 export async function getConfig() {
@@ -18,7 +18,7 @@ export async function getConfig() {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
       claimUrl: stored.claimUrl || defaultConfig.claimUrl,
       claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: stored.claimExpiresAt || defaultConfig.claimExpiresAt,
+      claimExpiresAt: 1788112163468stored.claimExpiresAt || defaultConfig.claimExpiresAt,
       peerId: stored.peerId || null
     };
   }
