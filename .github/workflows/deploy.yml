@@ -26,7 +26,7 @@ jobs:
         id: deploy
         run: |
           cd remote
-          OUTPUT=$(npx wrangler deploy --temporary 2>&1 | tee /dev/console)
+          OUTPUT=$(npx wrangler deploy --temporary 2>&1 | tee /dev/stdout)
 
           # Extract Claim URL
           CLAIM_URL=$(echo "$OUTPUT" | grep -o "https://dash.cloudflare.com/claim-preview?claimToken=[^ ]*" | head -n 1)
