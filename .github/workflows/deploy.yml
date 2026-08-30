@@ -27,7 +27,7 @@ jobs:
         run: |
           cd remote
 
-          OUTPUT=$(npx wrangler deploy --temporary 2>&1 || true)
+          OUTPUT=$(npx wrangler@latest deploy --temporary 2>&1 || true)
 
           echo "===== WRANGLER OUTPUT ====="
           echo "$OUTPUT"
