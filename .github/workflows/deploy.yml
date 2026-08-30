@@ -29,18 +29,21 @@ jobs:
 
           OUTPUT=$(npx wrangler deploy --temporary 2>&1)
 
-          echo "========== WRANGLER OUTPUT =========="
           echo "$OUTPUT"
-          echo "===================================="
 
-          # Extract Claim URL
-          CLAIM_URL=$(printf '%s\n' "$OUTPUT" | \
-            grep -oE 'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^"< ]+' | \
+          CLAIM_URL=$(echo "$OUTPUT" | \
+            grep -oE 'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^"]+' | \
             head -n1 || true)
 
-          # Extract Workers URL
-          REMOTE_PAGE_URL=$(printf '%s\n' "$OUTPUT" | \
-            grep -oE 'https://[A-Za-z0-9.-]+\.
+          REMOTE_PAGE_URL=$(echo "$OUTPUT" | \
+            grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' | \
+            head -n1 || true)
+
+          echo "CLAIM_URL=$CLAIM_URL" >> "$GITHUB_ENV"
+          echo "REMOTE_PAGE_URL=$REMOTE_PAGE_URL" >> "$GITHUB_ENV"
+
+          echo "Claim URL: $CLAIM_URL"
+          echo "Remote Page URL: $REMOTE_PAGE_URL"
 
       - name: Update chrome_extension/config.js
         run: |
