@@ -2,7 +2,7 @@ export const defaultConfig = {
   remotePageUrl: "",
   claimUrl: "",
   claimed: false,
-  claimExpiresAt: 1788112163468
+  claimExpiresAt: 1788134669543
 };
 
 export async function getConfig() {
@@ -18,7 +18,7 @@ export async function getConfig() {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
       claimUrl: stored.claimUrl || defaultConfig.claimUrl,
       claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: 1788112163468stored.claimExpiresAt || defaultConfig.claimExpiresAt,
+      claimExpiresAt: 1788134669543stored.claimExpiresAt || defaultConfig.claimExpiresAt,
       peerId: stored.peerId || null
     };
   }
