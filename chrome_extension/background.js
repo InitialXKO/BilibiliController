@@ -1,169 +1,33 @@
-// Globals for WebRTC
-let peerConnection;
-let dataChannel;
-let localOffer;
-let connectionState = 'disconnected'; // 'disconnected', 'connecting', 'connected'
+import { getConfig } from './config.js';
 
-// --- MicroSignalingServer ---
-const PORT = 8989; // An arbitrary port for our simulated server
+let connectionState = 'disconnected';
+let peerId = null;
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  if (url.hostname === 'localhost' && url.port == PORT) {
-    if (url.pathname.startsWith('/mobile.html')) {
-      event.respondWith(serveMobilePage());
-    } else if (url.pathname === '/offer' && event.request.method === 'GET') {
-      event.respondWith(serveOffer());
-    } else if (url.pathname === '/answer' && event.request.method === 'POST') {
-      event.respondWith(handleAnswer(event.request));
-    }
-  }
-});
-
-async function serveMobilePage() {
-  const response = await fetch('mobile.html');
-  const html = await response.text();
-  return new Response(html, { headers: { 'Content-Type': 'text/html' } });
-}
-
-function serveOffer() {
-  if (!localOffer) {
-    return new Response('Offer not ready', { status: 503 });
-  }
-  return new Response(JSON.stringify(localOffer), {
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-async function handleAnswer(request) {
-  try {
-    const answer = await request.json();
-    if (peerConnection) {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-      console.log('WebRTC connection established!');
-      connectionState = 'connected';
-      // Inform content script of successful connection
-      chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
-        tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'connection-successful' }));
-      });
-    }
-    return new Response(JSON.stringify({ status: 'connected' }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Failed to handle answer:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
-// --- Message Handling ---
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'get-status') {
-    checkBilibiliTab().then(isBilibili => {
-      sendResponse({
-        connectionState,
-        isBilibili,
-        qrUrl: connectionState === 'connecting' && localOffer ? `http://${localIp}:${PORT}/mobile.html` : null
-      });
-    });
-    return true;
-  } else if (message.type === "bilibili_playing_status" && dataChannel && dataChannel.readyState === 'open') {
-    dataChannel.send(JSON.stringify(message));
-  }
-});
-
-let localIp;
-
-async function startWebRTCConnection() {
-  if (connectionState !== 'disconnected') return;
-
-  connectionState = 'connecting';
-  localIp = await getLocalIpAddress();
-  if (!localIp) {
-    throw new Error('Could not determine local IP address.');
-  }
-
-  peerConnection = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+// Ensure offscreen document is created
+async function ensureOffscreenDocument() {
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT'],
+    documentUrls: [chrome.runtime.getURL('offscreen.html')]
   });
 
-  dataChannel = peerConnection.createDataChannel('bilibili-remote');
-  setupDataChannelListeners();
-
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate === null) {
-      localOffer = peerConnection.localDescription;
-      const qrUrl = `http://${localIp}:${PORT}/mobile.html`;
-      // Send QR code url to content script
-      chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
-        tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'show-qr-code', url: qrUrl }));
-      });
-    }
-  };
-
-  const offer = await peerConnection.createOffer();
-  await peerConnection.setLocalDescription(offer);
+  if (existingContexts.length === 0) {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['BLOBS', 'WEB_RTC'],
+      justification: 'Host PeerJS WebRTC DataChannel connection for Bilibili remote control.'
+    });
+  }
 }
 
-function setupDataChannelListeners() {
-  dataChannel.onopen = () => {
-    console.log('Data channel is open');
-    connectionState = 'connected';
-    // Inform content script of successful connection
-    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
-      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'connection-successful' }));
-    });
-  };
-  dataChannel.onclose = () => {
-    console.log('Data channel is closed');
-    connectionState = 'disconnected';
-    peerConnection = null;
-    localOffer = null;
-  };
-  dataChannel.onerror = (error) => {
-    console.error('Data channel error:', error);
-    connectionState = 'disconnected';
-  };
+// Service worker heartbeat keepalive
+setInterval(() => {
+  ensureOffscreenDocument().catch(() => {});
+}, 1000);
 
-  dataChannel.onmessage = (event) => {
-    const message = JSON.parse(event.data);
-    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
-      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, message));
-    });
-  };
-}
-
-function getLocalIpAddress() {
-  return new Promise((resolve, reject) => {
-    chrome.system.network.getNetworkInterfaces((interfaces) => {
-      if (chrome.runtime.lastError) {
-        return reject(chrome.runtime.lastError);
-      }
-      for (const iface of interfaces) {
-        if (!iface.address.startsWith('127.') && iface.prefixLength === 24) {
-          resolve(iface.address);
-          return;
-        }
-      }
-      const candidate = interfaces.find(iface => iface.address.includes('.'));
-      if (candidate) {
-        resolve(candidate.address);
-      } else {
-        reject(new Error('No suitable network interface found.'));
-      }
-    });
-  });
-}
-
-function checkBilibiliTab() {
+async function checkBilibiliTab() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
+      if (tabs.length > 0 && tabs[0].url) {
         const url = tabs[0].url;
         resolve(url.includes("bilibili.com/video/") || url.includes("bilibili.com/bangumi/play/"));
       } else {
@@ -173,9 +37,79 @@ function checkBilibiliTab() {
   });
 }
 
-// Start the connection process when a Bilibili tab is active
+async function notifyTabsAndPopup() {
+  const currentConfig = await getConfig();
+  let qrUrl = null;
+  if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
+    qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
+  }
+
+  if (qrUrl && connectionState !== 'connected') {
+    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'show-qr-code', url: qrUrl }));
+    });
+  }
+}
+
+// Handle incoming messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'offscreen-peer-status') {
+    connectionState = message.connectionState;
+    if (message.peerId) peerId = message.peerId;
+    notifyTabsAndPopup();
+  } else if (message.type === 'connection-successful') {
+    connectionState = 'connected';
+    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, { type: 'connection-successful' }));
+    });
+  } else if (message.type === 'forward-to-bilibili') {
+    chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
+      tabs.forEach(tab => chrome.tabs.sendMessage(tab.id, message.payload));
+    });
+  } else if (message.type === 'get-status') {
+    (async () => {
+      const isBilibili = await checkBilibiliTab();
+      const currentConfig = await getConfig();
+      if (!peerId && currentConfig.peerId) {
+        peerId = currentConfig.peerId;
+      }
+      let qrUrl = null;
+      if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
+        qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
+      }
+      sendResponse({
+        connectionState,
+        isBilibili,
+        peerId,
+        config: currentConfig,
+        qrUrl
+      });
+    })();
+    return true;
+  } else if (message.type === "bilibili_playing_status") {
+    chrome.runtime.sendMessage({
+      target: 'offscreen',
+      type: 'send-to-mobile',
+      payload: message
+    });
+  } else if (message.type === "reinit-peer") {
+    chrome.runtime.sendMessage({
+      target: 'offscreen',
+      type: 'init-peer'
+    }, (res) => {
+      sendResponse(res);
+    });
+    return true;
+  }
+});
+
+// Initialize offscreen document when service worker starts
+ensureOffscreenDocument();
+
+// Ensure connection when a Bilibili tab is completed loading
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && (tab.url.includes("bilibili.com/video/") || tab.url.includes("bilibili.com/bangumi/play/"))) {
-    startWebRTCConnection();
+  if (changeInfo.status === 'complete' && tab.url && (tab.url.includes("bilibili.com/video/") || tab.url.includes("bilibili.com/bangumi/play/"))) {
+    ensureOffscreenDocument();
+    notifyTabsAndPopup();
   }
 });

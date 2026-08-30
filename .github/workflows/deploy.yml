@@ -1,0 +1,61 @@
+name: Deploy Worker & Update Extension Config
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Deploy Cloudflare Worker (Temporary Account)
+        id: deploy
+        run: |
+          cd remote
+          OUTPUT=$(npx wrangler deploy --temporary 2>&1 | tee /dev/console)
+
+          # Extract Claim URL
+          CLAIM_URL=$(echo "$OUTPUT" | grep -o "https://dash.cloudflare.com/claim-preview?claimToken=[^ ]*" | head -n 1)
+          # Extract Deployed Page URL
+          REMOTE_PAGE_URL=$(echo "$OUTPUT" | grep -o "https://[a-zA-Z0-9.-]*\.workers\.dev" | head -n 1)
+
+          echo "CLAIM_URL=$CLAIM_URL" >> $GITHUB_ENV
+          echo "REMOTE_PAGE_URL=$REMOTE_PAGE_URL" >> $GITHUB_ENV
+          echo "Claim URL: $CLAIM_URL"
+          echo "Remote Page URL: $REMOTE_PAGE_URL"
+
+      - name: Update chrome_extension/config.js
+        run: |
+          EXPIRES_AT=$(node -e 'console.log(Date.now() + 60 * 60 * 1000)')
+
+          sed -i "s|remotePageUrl: \".*\"|remotePageUrl: \"${REMOTE_PAGE_URL}\"|g" chrome_extension/config.js
+          sed -i "s|claimUrl: \".*\"|claimUrl: \"${CLAIM_URL}\"|g" chrome_extension/config.js
+          sed -i "s|claimExpiresAt: [0-9]*|claimExpiresAt: ${EXPIRES_AT}|g" chrome_extension/config.js
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add chrome_extension/config.js
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "ci: update remote worker page & claim link"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

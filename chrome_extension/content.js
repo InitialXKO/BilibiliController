@@ -42,6 +42,7 @@ createUI();
 // interval to update video status
 function getVideoStatus() {
   const video = document.querySelector(".bpx-player-video-wrap video");
+  if (!video) return null;
   return {
     paused: video.paused,
     currentTime: video.currentTime,
@@ -52,19 +53,14 @@ function getVideoStatus() {
 }
 const interval = setInterval(() => {
   if (document.hidden) return;
-  chrome.runtime.sendMessage({
-    type: "bilibili_playing_status",
-    data: JSON.stringify(getVideoStatus())
-  });
+  const status = getVideoStatus();
+  if (status) {
+    chrome.runtime.sendMessage({
+      type: "bilibili_playing_status",
+      data: JSON.stringify(status)
+    });
+  }
 }, 500);
-
-const allowedCommands = {
-  "playbackRate": (video, value) => video.playbackRate = parseFloat(value),
-  "volume": (video, value) => video.volume = parseFloat(value),
-  "pause": (video) => video.pause(),
-  "play": (video) => video.play(),
-  "currentTime": (video, value) => video.currentTime = parseFloat(value)
-};
 
 function parseAndApplyScript(video, script) {
   const lines = script.split(";").map(line => line.trim()).filter(Boolean);
@@ -463,31 +459,38 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     } else if (command == "ArrowRight") {
       picker.moveNext("right");
     }
-  } else if (msg.type == "bilibili_next") {
-    document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-next").click();
-  } else if (msg.type == "bilibili_previous") {
-    document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-prev").click();
-  } else if (msg.type == "bilibili_fullscreen") {
-    document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-full").click();
-  } else if (msg.type == "bilibili_pause_and_play") {
-    document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-play").click();
-    chrome.runtime.sendMessage({
-      type: "bilibili_playing_status",
-      data: JSON.stringify(getVideoStatus())
-    });
-  } else if (msg.type == "bilibili_seek") {
+  } else if (msg.type === "bilibili_next") {
+    const nextBtn = document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-next");
+    if (nextBtn) nextBtn.click();
+  } else if (msg.type === "bilibili_previous") {
+    const prevBtn = document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-prev");
+    if (prevBtn) prevBtn.click();
+  } else if (msg.type === "bilibili_fullscreen") {
+    const fullBtn = document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-full");
+    if (fullBtn) fullBtn.click();
+  } else if (msg.type === "bilibili_pause_and_play") {
+    const playBtn = document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-play");
+    if (playBtn) playBtn.click();
+    const status = getVideoStatus();
+    if (status) {
+      chrome.runtime.sendMessage({
+        type: "bilibili_playing_status",
+        data: JSON.stringify(status)
+      });
+    }
+  } else if (msg.type === "bilibili_seek") {
     const video = document.querySelector(".bpx-player-video-wrap video");
     if (!video) return;
-    var seekData = JSON.parse(msg.data);
+    var seekData = typeof msg.data === 'string' ? JSON.parse(msg.data) : msg.data;
     video.currentTime = seekData.time;
-  } else if (msg.type == "bilibili_playing_status_request") {
-    chrome.runtime.sendMessage({
-      type: "bilibili_playing_status",
-      data: JSON.stringify(getVideoStatus())
-    });
-  } else if (msg.type == "bilibili_fullscreen") {
-    document.querySelector(".bpx-player-ctrl-btn.bpx-player-ctrl-full").click();
-    console.log("juzhen fullscreen button clicked");
+  } else if (msg.type === "bilibili_playing_status_request") {
+    const status = getVideoStatus();
+    if (status) {
+      chrome.runtime.sendMessage({
+        type: "bilibili_playing_status",
+        data: JSON.stringify(status)
+      });
+    }
   } else {
     console.log("Unknown message type in content script:", msg.type);
   }
