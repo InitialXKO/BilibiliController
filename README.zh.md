@@ -1,32 +1,30 @@
-# Bilibili 遥控器 (WebRTC 版)
+# Bilibili 遥控器 (PeerJS + Cloudflare Worker 版)
 
-> 无需任何配置，只需扫描二维码，即可将你的手机变成 Bilibili 遥控器！
+> 无需任何复杂凭据配置，只需 Fork 本仓库并扫码，即可将手机变成 Bilibili 遥控器！
 
 ![demo](misc/demo.png)
 
-## 工作原理
+## 目标架构
 
-这款扩展程序能将你的手机变成电脑上 Bilibili 视频播放器的遥控器。它采用了创新的 **WebRTC + 二维码** 架构，在手机和浏览器之间建立直接的点对点连接，无需单独的服务器、防火墙配置或手动输入 IP 地址。
+```text
+电脑扩展 SW ──WSS──→ PeerJS 云（仅握手，用完即弃）
+手机 Worker 页 ──WSS──┘
+        ↓
+电脑 ⇆ 手机 WebRTC DataChannel 直连（控制命令/播放状态 P2P 直连，不经过任何服务器）
+```
 
-新设计的主要特点：
-- **零配置安装**：不再需要 Python 服务器或 Docker 容器。该扩展完全独立。
-- **微型信令服务器**：扩展的服务工作线程 (service worker) 内部运行一个临时的轻量级信令服务器，用于促成初始的 WebRTC 握手。
-- **扫码即用**：只需点击扩展图标，用手机扫描生成的二维码，遥控器即可立即连接。
+## 核心特性
 
-## 安装与使用
+- **PeerJS 架构**：通过 PeerJS 信令完成 WebRTC P2P 握手，数据通过 DataChannel 局域网/直连通信。
+- **零凭据开箱**：部署至 Cloudflare Worker (`wrangler deploy --temporary`)，通过「临时账户 + 认领链接」实现一键绑定。
+- **移除假权限与本地服务器**：彻底废弃 `system.network` 假权限与本地 Python/HTTP 信令逻辑，Host 权限收窄至 `*.bilibili.com`。
+- **完整操控**：支持播放/暂停、快进快退、进度条拖拽防冲突、倍速切换、音量调节、上下集切换、全屏以及 D-Pad 导航。
 
-1.  **加载 Chrome 扩展：**
-    -   打开 Chrome 浏览器，访问 `chrome://extensions`。
-    -   启用“开发者模式”。
-    -   点击“加载已解压的扩展程序”，然后选择 `chrome_extension/` 目录。
+## 首次使用流程
 
-2.  **连接手机：**
-    -   访问一个 Bilibili 视频页面。
-    -   点击工具栏中的 Bilibili 遥控器扩展图标。
-    -   一个带有二维码的弹窗会自动出现。
-
-3.  **连接手机：**
-    -   用手机摄像头扫描二维码。
-    -   手机浏览器将打开一个网页版遥控器，并立即连接到视频播放器。
-
-现在，你可以用手机控制视频了！
+1. **Fork 本仓库**。
+2. 进入 Actions 页面，运行 **Deploy Worker & Update Extension Config** 工作流（或 Push 一次提交自动触发）。
+3. 加载扩展并点击图标：
+   - 点击生成的 **Cloudflare 认领链接**（60分钟内有效），登录/注册 Cloudflare 完成 Worker 认领。
+   - 回到扩展弹窗点击 **验证并保存认领状态**。
+4. 打开任意 B 站视频页（`bilibili.com/video/...`），用手机扫描弹出的二维码即可开始遥控。

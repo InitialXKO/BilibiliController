@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Bilibili Remote</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <h1 class="title">Bilibili Remote</h1>
+
+  <div class="player-container">
+    <!-- Main Controls -->
+    <div class="main-controls">
+      <button id="pausePlayBtn" class="primary-btn">▶ Play</button>
+      <div class="secondary-controls">
+        <button id="prevBtn">⏮ Prev</button>
+        <button id="nextBtn">⏭ Next</button>
+        <button id="fullscreenBtn" style="display: none">⛶ Fullscreen</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-control">
+      <input type="range" id="progressSlider" min="0" max="100" value="0">
+      <span id="progressLabel">0:00 / 0:00</span>
+    </div>
+
+    <!-- Skip -->
+    <div class="skip-controls">
+      <button id="rewindBtn">⏪ -10s</button>
+      <button id="forwardBtn">⏩ +10s</button>
+    </div>
+
+    <!-- Media Settings -->
+    <div class="media-settings">
+      <div class="volume-control">
+        <label for="volumeSlider">🔊</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="30">
+        <span id="volumeLabel">30%</span>
+      </div>
+      <div class="playback-rate-control">
+        <label for="playbackRate">Speed:</label>
+        <select id="playbackRate">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2x</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remote D-Pad -->
+  <div id="remote-container">
+    <div id="dpad">
+      <div class="dpad-row">
+        <button id="btn-up" class="remote-btn">▲</button>
+      </div>
+      <div class="dpad-row">
+        <button id="btn-left" class="remote-btn">◀</button>
+        <button id="btn-enter" class="remote-btn btn-enter">OK</button>
+        <button id="btn-right" class="remote-btn">▶</button>
+      </div>
+      <div class="dpad-row">
+        <button id="btn-down" class="remote-btn">▼</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="peerjs.min.js"></script>
+  <script src="mobile.js"></script>
+</body>
+</html>

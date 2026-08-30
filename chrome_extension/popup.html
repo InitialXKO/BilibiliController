@@ -1,20 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Bilibili Remote</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 10px; min-width: 280px; }
-    #qr-code, #message { margin-top: 10px; }
-    #loading, #message { font-size: 1.2em; }
-    #message { display: none; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 15px; min-width: 300px; max-width: 360px; margin: 0; color: #333; }
+    h1 { font-size: 1.2rem; margin-top: 0; margin-bottom: 12px; color: #00a1d6; }
+    .card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+    #qr-code { display: flex; justify-content: center; margin: 10px 0; }
+    .btn { background-color: #00a1d6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; margin-top: 8px; }
+    .btn:hover { background-color: #0085b2; }
+    .btn-secondary { background-color: #6c757d; }
+    .btn-secondary:hover { background-color: #5a6268; }
+    .btn-danger { background-color: #dc3545; }
+    .btn-danger:hover { background-color: #bd2130; }
+    .countdown { font-weight: bold; color: #e6a23c; margin: 5px 0; }
+    .status-text { font-size: 0.95rem; line-height: 1.4; color: #555; }
+    .url-box { font-size: 0.8rem; background: #eee; padding: 4px 8px; border-radius: 4px; word-break: break-all; margin: 6px 0; }
+    #footer { margin-top: 12px; font-size: 0.8rem; }
   </style>
 </head>
 <body>
-  <h1>Bilibili Remote</h1>
-  <div id="loading">Loading...</div>
-  <div id="qr-code" style="display: none;"></div>
-  <div id="message"></div>
+  <h1>Bilibili 遥控器</h1>
+
+  <div id="loading">加载中...</div>
+
+  <!-- State 1: Unclaimed Temporary Worker -->
+  <div id="state-unclaimed" style="display: none;" class="card">
+    <div class="status-text">首次使用需要认领临时 Cloudflare Worker（零凭据）:</div>
+    <div class="countdown" id="countdown-timer">认领剩余时间: --分--秒</div>
+    <a id="claim-link" href="#" target="_blank" class="btn">点此前往 Cloudflare 认领</a>
+    <div style="margin-top: 10px;">
+      <button id="btn-verify-claim" class="btn btn-secondary">验证并保存认领状态</button>
+    </div>
+  </div>
+
+  <!-- State 2: Claimed / Ready QR Code -->
+  <div id="state-claimed" style="display: none;">
+    <div id="qr-container" class="card">
+      <div id="qr-code"></div>
+      <div id="connection-status" class="status-text">扫码连接遥控器</div>
+    </div>
+  </div>
+
+  <!-- State 3: Not Bilibili Page or General Message -->
+  <div id="state-message" style="display: none;" class="card">
+    <div id="message-text" class="status-text"></div>
+  </div>
+
+  <div id="footer">
+    <button id="btn-reset" class="btn btn-danger" style="font-size: 0.75rem; padding: 4px 8px;">重置配置</button>
+  </div>
+
   <script src="qrcode.min.js"></script>
-  <script src="popup.js"></script>
+  <script type="module" src="popup.js"></script>
 </body>
 </html>

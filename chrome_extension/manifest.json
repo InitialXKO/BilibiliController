@@ -14,8 +14,8 @@
       "css": ["style.css"]
     }
   ],
-  "permissions": ["scripting", "tabs", "system.network"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["scripting", "tabs", "storage", "offscreen"],
+  "host_permissions": ["*://*.bilibili.com/*"],
   "action": {
     "default_popup": "popup.html"
   }

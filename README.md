@@ -1,32 +1,31 @@
-# Bilibili Remote Control (WebRTC Version)
+# Bilibili Remote Control (PeerJS + Cloudflare Worker Version)
 
-> Control Bilibili videos from your phone with zero setup. Just scan a QR code!
+> Control Bilibili videos from your mobile device with zero setup! PeerJS WebRTC P2P direct connection with Cloudflare Worker static remote page.
 
 ![demo](misc/demo.png)
 
-## How It Works
+## Architecture
 
-This extension turns your phone into a remote control for the Bilibili video player running on your computer. It uses an innovative **WebRTC + QR Code** architecture to create a direct, peer-to-peer connection between your phone and your browser, eliminating the need for a separate server, firewall configurations, or manual IP address entry.
+```text
+Computer Extension SW ──WSS──→ PeerJS Cloud (Handshake only)
+Mobile Remote Worker Page ──WSS──┘
+        ↓
+Computer ⇆ Mobile WebRTC DataChannel (Direct P2P control & video status, zero server dependency)
+```
 
-The key features of this new design are:
-- **Zero-Configuration Setup**: No more Python servers or Docker containers. The extension is entirely self-contained.
-- **Micro Signaling Server**: A temporary, lightweight signaling server runs inside the extension's service worker to facilitate the initial WebRTC handshake.
-- **Scan-and-Go**: Simply click the extension icon, scan the generated QR code with your phone, and the remote is instantly connected.
+## Features
 
-## Installation and Usage
+- **PeerJS WebRTC Direct Connection**: Direct WebRTC DataChannel between phone and computer for low latency and zero privacy concerns.
+- **Zero-Credential Setup**: Deploy mobile remote page to Cloudflare Workers via temporary account claiming URL (`wrangler deploy --temporary`).
+- **Zero Local Server Needed**: No Python scripts, no Docker, no fake `system.network` permissions needed.
+- **Full Player Controls**: Play/Pause, Seek slider (with smooth drag protection), Speed, Volume, Previous/Next, Fullscreen, and D-Pad navigation.
 
-1.  **Load the Chrome Extension:**
-    -   Open Chrome and navigate to `chrome://extensions`.
-    -   Enable "Developer mode".
-    -   Click "Load unpacked" and select the `chrome_extension/` directory.
+## Quick Start (For Forkers)
 
-2.  **Connect Your Phone:**
-    -   Navigate to a Bilibili video page.
-    -   Click the Bilibili Remote Control extension icon in your toolbar.
-    -   A popup with a QR code will appear automatically.
-
-3.  **Connect Your Phone:**
-    -   Scan the QR code with your phone's camera.
-    -   A web-based remote control will open in your phone's browser, instantly connected to the video player.
-
-Now you can control the video from your phone!
+1. **Fork this repository**.
+2. Go to Actions tab, run the **Deploy Worker & Update Extension Config** workflow (or trigger by pushing a commit).
+3. Open the Extension popup:
+   - Click the **Cloudflare Claim Link** (valid for 60 minutes) to link the Worker to your Cloudflare account.
+   - Click **Verify and Save**.
+4. Load `chrome_extension/` directory as an unpacked extension in Chrome (`chrome://extensions`).
+5. Open any Bilibili video page (`bilibili.com/video/...`), scan the generated QR code with your phone!
