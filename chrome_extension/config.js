@@ -1,8 +1,8 @@
 export const defaultConfig = {
-  remotePageUrl: "",
-  claimUrl: "",
+  remotePageUrl: "https://bilibili-remote.dust-rail.workers.dev",
+  claimUrl: "https://dash.cloudflare.com/claim-preview?claimToken=vn_KxfXy3EVaUUXzklT3sptNVd2-jXbVWUHSwGEphvM",
   claimed: false,
-  claimExpiresAt: 1788136484603
+  claimExpiresAt: 1788136603868
 };
 
 export async function getConfig() {
@@ -18,7 +18,7 @@ export async function getConfig() {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
       claimUrl: stored.claimUrl || defaultConfig.claimUrl,
       claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: 1788136484603stored.claimExpiresAt || defaultConfig.claimExpiresAt,
+      claimExpiresAt: 1788136603868stored.claimExpiresAt || defaultConfig.claimExpiresAt,
       peerId: stored.peerId || null
     };
   }
