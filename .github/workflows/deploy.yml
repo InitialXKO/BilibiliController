@@ -28,10 +28,10 @@ jobs:
           cd remote
           OUTPUT=$(npx wrangler deploy --temporary 2>&1 | tee /dev/console)
 
-          # Extract Claim URL
-          CLAIM_URL=$(echo "$OUTPUT" | grep -o "https://dash.cloudflare.com/claim-preview?claimToken=[^ ]*" | head -n 1)
+          # Extract Claim URL if available in output
+          CLAIM_URL=$(echo "$OUTPUT" | grep -o "https://dash.cloudflare.com/claim-preview?claimToken=[^ ]*" | head -n 1 || true)
           # Extract Deployed Page URL
-          REMOTE_PAGE_URL=$(echo "$OUTPUT" | grep -o "https://[a-zA-Z0-9.-]*\.workers\.dev" | head -n 1)
+          REMOTE_PAGE_URL=$(echo "$OUTPUT" | grep -o "https://[a-zA-Z0-9.-]*\.workers\.dev" | head -n 1 || true)
 
           echo "CLAIM_URL=$CLAIM_URL" >> $GITHUB_ENV
           echo "REMOTE_PAGE_URL=$REMOTE_PAGE_URL" >> $GITHUB_ENV
