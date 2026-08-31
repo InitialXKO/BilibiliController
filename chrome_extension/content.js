@@ -431,7 +431,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   } else if (msg.type === 'show-qr-code') {
     showQRCode(msg.url);
-  } else if (msg.type === 'connection-successful') {
+  } else if (msg.type === 'connection-successful' || msg.type === 'hide-qr-code') {
     hideQRCode();
   } else if (msg.type == "update_video_status") {
     const video = document.querySelector(".bpx-player-video-wrap video");
