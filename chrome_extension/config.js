@@ -18,7 +18,7 @@ export async function getConfig() {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
       claimUrl: stored.claimUrl || defaultConfig.claimUrl,
       claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: 1788136603868stored.claimExpiresAt || defaultConfig.claimExpiresAt,
+      claimExpiresAt: stored.claimExpiresAt || defaultConfig.claimExpiresAt,
       peerId: stored.peerId || null
     };
   }

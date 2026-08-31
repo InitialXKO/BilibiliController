@@ -93,7 +93,7 @@ jobs:
 
           sed -i "s|remotePageUrl: \".*\"|remotePageUrl: \"${REMOTE_PAGE_URL}\"|g" chrome_extension/config.js
           sed -i "s|claimUrl: \".*\"|claimUrl: \"${CLAIM_URL}\"|g" chrome_extension/config.js
-          sed -i "s|claimExpiresAt: [0-9]*|claimExpiresAt: ${EXPIRES_AT}|g" chrome_extension/config.js
+          sed -i "s|claimExpiresAt: [0-9][0-9]*|claimExpiresAt: ${EXPIRES_AT}|g" chrome_extension/config.js
 
       - name: Commit and Push Changes
         if: steps.check_deploy.outputs.SKIP_DEPLOY != 'true'
