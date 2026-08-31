@@ -21,7 +21,8 @@ jobs:
 
       - name: Build Extension Package
         run: |
-          npx crx pack chrome_extension -o bilibili-remote-control.crx --zip-output bilibili-remote-control.zip
+          npx crx keygen .
+          npx crx pack chrome_extension -p key.pem -o bilibili-remote-control.crx --zip-output bilibili-remote-control.zip
 
       - name: Upload CRX & ZIP to Release
         uses: softprops/action-gh-release@v2
