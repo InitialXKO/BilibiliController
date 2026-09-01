@@ -2,75 +2,88 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>Bilibili Remote</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Bilibili Remote Loader</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1a1a1a;
+      color: #fff;
+    }
+
+    #loader-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #00a1d6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .status-text {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: #e0e0e0;
+    }
+
+    .error-text {
+      color: #ff5252;
+      font-size: 0.95rem;
+      max-width: 320px;
+      margin-top: 10px;
+      word-break: break-all;
+    }
+
+    .retry-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #00a1d6;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #app-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h1 class="title">Bilibili Remote</h1>
-
-  <div class="player-container">
-    <!-- Main Controls -->
-    <div class="main-controls">
-      <button id="pausePlayBtn" class="primary-btn">▶ Play</button>
-      <div class="secondary-controls">
-        <button id="prevBtn">⏮ Prev</button>
-        <button id="nextBtn">⏭ Next</button>
-        <button id="fullscreenBtn" style="display: none">⛶ Fullscreen</button>
-      </div>
-    </div>
-
-    <!-- Progress -->
-    <div class="progress-control">
-      <input type="range" id="progressSlider" min="0" max="100" value="0">
-      <span id="progressLabel">0:00 / 0:00</span>
-    </div>
-
-    <!-- Skip -->
-    <div class="skip-controls">
-      <button id="rewindBtn">⏪ -10s</button>
-      <button id="forwardBtn">⏩ +10s</button>
-    </div>
-
-    <!-- Media Settings -->
-    <div class="media-settings">
-      <div class="volume-control">
-        <label for="volumeSlider">🔊</label>
-        <input type="range" id="volumeSlider" min="0" max="100" value="30">
-        <span id="volumeLabel">30%</span>
-      </div>
-      <div class="playback-rate-control">
-        <label for="playbackRate">Speed:</label>
-        <select id="playbackRate">
-          <option value="0.5">0.5x</option>
-          <option value="0.75">0.75x</option>
-          <option value="1" selected>1x</option>
-          <option value="1.25">1.25x</option>
-          <option value="1.5">1.5x</option>
-          <option value="2">2x</option>
-        </select>
-      </div>
-    </div>
+  <div id="loader-container">
+    <div class="spinner" id="spinner"></div>
+    <div class="status-text" id="status-text">正在连接扩展端...</div>
+    <div class="error-text" id="error-text" style="display: none;"></div>
+    <button class="retry-btn" id="retry-btn" style="display: none;" onclick="location.reload()">重新连接</button>
   </div>
 
-  <!-- Remote D-Pad -->
-  <div id="remote-container">
-    <div id="dpad">
-      <div class="dpad-row">
-        <button id="btn-up" class="remote-btn">▲</button>
-      </div>
-      <div class="dpad-row">
-        <button id="btn-left" class="remote-btn">◀</button>
-        <button id="btn-enter" class="remote-btn btn-enter">OK</button>
-        <button id="btn-right" class="remote-btn">▶</button>
-      </div>
-      <div class="dpad-row">
-        <button id="btn-down" class="remote-btn">▼</button>
-      </div>
-    </div>
-  </div>
+  <iframe id="app-frame" sandbox="allow-scripts allow-same-origin"></iframe>
 
-  <script src="peerjs.min.js"></script>
-  <script src="mobile.js"></script>
+  <script type="module" src="mobile.js"></script>
 </body>
 </html>

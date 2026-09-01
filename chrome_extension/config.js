@@ -1,24 +1,18 @@
 export const defaultConfig = {
-  remotePageUrl: "https://bilibili-remote.dust-rail.workers.dev",
-  claimUrl: "https://dash.cloudflare.com/claim-preview?claimToken=vn_KxfXy3EVaUUXzklT3sptNVd2-jXbVWUHSwGEphvM",
-  claimed: false,
-  claimExpiresAt: 1788136603868
+  remotePageUrl: "https://cdn.jsdelivr.net/gh/remote-control/bilibili-remote-control@main/remote/public/index.html",
+  strategy: "mqtt"
 };
 
 export async function getConfig() {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     const stored = await chrome.storage.local.get([
       'remotePageUrl',
-      'claimUrl',
-      'claimed',
-      'claimExpiresAt',
+      'strategy',
       'peerId'
     ]);
     return {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
-      claimUrl: stored.claimUrl || defaultConfig.claimUrl,
-      claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: stored.claimExpiresAt || defaultConfig.claimExpiresAt,
+      strategy: stored.strategy || defaultConfig.strategy,
       peerId: stored.peerId || null
     };
   }
@@ -35,9 +29,7 @@ export async function resetConfig() {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     await chrome.storage.local.remove([
       'remotePageUrl',
-      'claimUrl',
-      'claimed',
-      'claimExpiresAt',
+      'strategy',
       'peerId'
     ]);
   }

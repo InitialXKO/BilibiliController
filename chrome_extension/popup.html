@@ -10,13 +10,9 @@
     #qr-code { display: flex; justify-content: center; margin: 10px 0; }
     .btn { background-color: #00a1d6; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; margin-top: 8px; }
     .btn:hover { background-color: #0085b2; }
-    .btn-secondary { background-color: #6c757d; }
-    .btn-secondary:hover { background-color: #5a6268; }
     .btn-danger { background-color: #dc3545; }
     .btn-danger:hover { background-color: #bd2130; }
-    .countdown { font-weight: bold; color: #e6a23c; margin: 5px 0; }
     .status-text { font-size: 0.95rem; line-height: 1.4; color: #555; }
-    .url-box { font-size: 0.8rem; background: #eee; padding: 4px 8px; border-radius: 4px; word-break: break-all; margin: 6px 0; }
     #footer { margin-top: 12px; font-size: 0.8rem; }
   </style>
 </head>
@@ -25,17 +21,7 @@
 
   <div id="loading">加载中...</div>
 
-  <!-- State 1: Unclaimed Temporary Worker -->
-  <div id="state-unclaimed" style="display: none;" class="card">
-    <div class="status-text">首次使用需要认领临时 Cloudflare Worker（零凭据）:</div>
-    <div class="countdown" id="countdown-timer">认领剩余时间: --分--秒</div>
-    <a id="claim-link" href="#" target="_blank" class="btn">点此前往 Cloudflare 认领</a>
-    <div style="margin-top: 10px;">
-      <button id="btn-verify-claim" class="btn btn-secondary">验证并保存认领状态</button>
-    </div>
-  </div>
-
-  <!-- State 2: Claimed / Ready QR Code -->
+  <!-- QR Code State -->
   <div id="state-claimed" style="display: none;">
     <div id="qr-container" class="card">
       <div id="qr-code"></div>
@@ -43,13 +29,13 @@
     </div>
   </div>
 
-  <!-- State 3: Not Bilibili Page or General Message -->
+  <!-- Not Bilibili Page or General Message -->
   <div id="state-message" style="display: none;" class="card">
     <div id="message-text" class="status-text"></div>
   </div>
 
   <div id="footer">
-    <button id="btn-reset" class="btn btn-danger" style="font-size: 0.75rem; padding: 4px 8px;">重置配置</button>
+    <button id="btn-reset" class="btn btn-danger" style="font-size: 0.75rem; padding: 4px 8px;">重置 Peer ID</button>
   </div>
 
   <script src="qrcode.min.js"></script>
