@@ -208,6 +208,7 @@
       }
 
       window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
         const message = event.data;
         if (!message || message.type !== 'bilibili_playing_status') return;
 

@@ -64,6 +64,7 @@ if (!peerId) {
     });
 
     window.addEventListener('message', (event) => {
+      if (event.source !== appFrame.contentWindow) return;
       if (event.data && event.data.type === 'remote_command') {
         sendCmd(event.data.payload);
       }
