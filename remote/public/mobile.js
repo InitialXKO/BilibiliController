@@ -1,4 +1,4 @@
-import { joinRoom } from 'https://cdn.jsdelivr.net/npm/trystero@0.22.0/mqtt.js/+esm';
+import { joinRoom } from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/mqtt@0.25.4/+esm';
 
 function getPeerIdFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);

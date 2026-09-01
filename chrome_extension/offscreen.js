@@ -20,7 +20,18 @@ async function fetchUIHtml() {
   return uiHtmlContent;
 }
 
-async function initPeer() {
+async function initPeer(forceReinit = false) {
+  if (forceReinit && room) {
+    try {
+      room.leave();
+    } catch (e) {
+      console.error('Error leaving room on reinit:', e);
+    }
+    room = null;
+    connectedPeersCount = 0;
+    connectionState = 'disconnected';
+  }
+
   const currentConfig = await getConfig();
   if (currentConfig.peerId) {
     peerId = currentConfig.peerId;
@@ -95,8 +106,9 @@ function notifyBackgroundState() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.target !== 'offscreen') return;
 
-  if (message.type === 'init-peer') {
-    initPeer().then(() => sendResponse({ success: true, connectionState, peerId }));
+  if (message.type === 'init-peer' || message.type === 'reinit-peer') {
+    const forceReinit = message.type === 'reinit-peer';
+    initPeer(forceReinit).then(() => sendResponse({ success: true, connectionState, peerId }));
     return true;
   } else if (message.type === 'send-to-mobile') {
     if (sendStatusAction && connectionState === 'connected') {
