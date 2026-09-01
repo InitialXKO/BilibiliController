@@ -1,5 +1,5 @@
 export const defaultConfig = {
-  remotePageUrl: "https://cdn.jsdelivr.net/gh/remote-control/bilibili-remote-control@main/remote/public/index.html",
+  remotePageUrl: "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@main/remote/public/index.html",
   strategy: "mqtt"
 };
 
