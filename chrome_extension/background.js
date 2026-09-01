@@ -99,7 +99,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === "reinit-peer") {
     chrome.runtime.sendMessage({
       target: 'offscreen',
-      type: 'init-peer'
+      type: 'reinit-peer'
     }, (res) => {
       sendResponse(res);
     });
