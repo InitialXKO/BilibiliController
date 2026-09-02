@@ -2,6 +2,7 @@ import { getConfig } from './config.js';
 
 let connectionState = 'disconnected';
 let peerId = null;
+let roomSecret = null;
 
 // Ensure offscreen document is created
 async function ensureOffscreenDocument() {
@@ -39,9 +40,13 @@ async function checkBilibiliTab() {
 
 async function notifyTabsAndPopup() {
   const currentConfig = await getConfig();
+  const activeSecret = roomSecret || currentConfig.roomSecret;
   let qrUrl = null;
   if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
     qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
+    if (activeSecret) {
+      qrUrl += `&key=${encodeURIComponent(activeSecret)}`;
+    }
   }
 
   if (connectionState === 'connected') {
@@ -60,6 +65,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'offscreen-peer-status') {
     connectionState = message.connectionState;
     if (message.peerId) peerId = message.peerId;
+    if (message.roomSecret) roomSecret = message.roomSecret;
     notifyTabsAndPopup();
   } else if (message.type === 'connection-successful') {
     connectionState = 'connected';
@@ -77,9 +83,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!peerId && currentConfig.peerId) {
         peerId = currentConfig.peerId;
       }
+      const activeSecret = roomSecret || currentConfig.roomSecret;
       let qrUrl = null;
       if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
         qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
+        if (activeSecret) {
+          qrUrl += `&key=${encodeURIComponent(activeSecret)}`;
+        }
       }
       sendResponse({
         connectionState,

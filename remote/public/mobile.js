@@ -1,8 +1,11 @@
 import { joinRoom } from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/mqtt@0.25.4/+esm';
 
-function getPeerIdFromUrl() {
+function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('peerId');
+  return {
+    peerId: urlParams.get('peerId'),
+    key: urlParams.get('key')
+  };
 }
 
 const statusText = document.getElementById('status-text');
@@ -24,7 +27,7 @@ function updateStatus(msg) {
   statusText.textContent = msg;
 }
 
-const peerId = getPeerIdFromUrl();
+const { peerId, key } = getUrlParams();
 
 if (!peerId) {
   showError('URL 参数中未找到 peerId，请重新在 B站 视频页扫描二维码');
@@ -32,6 +35,7 @@ if (!peerId) {
   try {
     const trysteroConfig = {
       appId: 'bilibili-remote-control',
+      password: key || undefined,
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }
@@ -85,7 +89,7 @@ if (!peerId) {
     // Timeout fallback after 20 seconds
     setTimeout(() => {
       if (!uiReceived) {
-        showError('等待 UI 包超时，请确认电脑端扩展处于激活状态并开启了 B站 视频页');
+        showError('等待 UI 包超时，请确认口令正确，且电脑端扩展处于激活状态并开启了 B站 视频页');
       }
     }, 20000);
 

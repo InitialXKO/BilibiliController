@@ -19,6 +19,19 @@ jobs:
         with:
           node-version: 22
 
+      - name: Verify shell URL pinned to this release tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          grep -q "@${TAG}/remote/public/index.html" chrome_extension/config.js \
+            || { echo "::error::config.js 未钉住 ${TAG}"; exit 1; }
+          for i in 1 2 3; do
+            curl -fsSL -o /dev/null \
+              "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@${TAG}/remote/public/index.html" \
+              && exit 0
+            sleep 20
+          done
+          echo "::error::jsDelivr 取不到 ${TAG} 的壳页"; exit 1
+
       - name: Build Extension Package
         run: |
           openssl genrsa -out key.pem 2048

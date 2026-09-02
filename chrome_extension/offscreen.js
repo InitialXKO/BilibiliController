@@ -3,6 +3,7 @@ import { getConfig, updateConfig } from './config.js';
 
 let room = null;
 let peerId = null;
+let roomSecret = null;
 let connectionState = 'disconnected'; // 'disconnected', 'connecting', 'connected'
 let uiHtmlContent = null;
 let sendUiAction = null;
@@ -18,6 +19,12 @@ async function fetchUIHtml() {
     console.error('Failed to fetch ui.html:', e);
   }
   return uiHtmlContent;
+}
+
+function generateSecret() {
+  return btoa(String.fromCharCode(
+    ...crypto.getRandomValues(new Uint8Array(16))
+  )).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
 }
 
 async function initPeer(forceReinit = false) {
@@ -40,6 +47,13 @@ async function initPeer(forceReinit = false) {
     await updateConfig({ peerId });
   }
 
+  if (currentConfig.roomSecret) {
+    roomSecret = currentConfig.roomSecret;
+  } else {
+    roomSecret = generateSecret();
+    await updateConfig({ roomSecret });
+  }
+
   if (room) {
     return;
   }
@@ -49,6 +63,7 @@ async function initPeer(forceReinit = false) {
 
   const trysteroConfig = {
     appId: 'bilibili-remote-control',
+    password: roomSecret,
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' }
@@ -99,7 +114,8 @@ function notifyBackgroundState() {
   chrome.runtime.sendMessage({
     type: 'offscreen-peer-status',
     connectionState,
-    peerId
+    peerId,
+    roomSecret
   });
 }
 
@@ -108,7 +124,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'init-peer' || message.type === 'reinit-peer') {
     const forceReinit = message.type === 'reinit-peer';
-    initPeer(forceReinit).then(() => sendResponse({ success: true, connectionState, peerId }));
+    initPeer(forceReinit).then(() => sendResponse({ success: true, connectionState, peerId, roomSecret }));
     return true;
   } else if (message.type === 'send-to-mobile') {
     if (sendStatusAction && connectionState === 'connected') {
@@ -116,7 +132,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendStatusAction(payload);
     }
   } else if (message.type === 'get-peer-status') {
-    sendResponse({ connectionState, peerId });
+    sendResponse({ connectionState, peerId, roomSecret });
   }
 });
 

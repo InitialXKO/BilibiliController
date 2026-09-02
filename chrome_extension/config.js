@@ -8,15 +8,17 @@ export async function getConfig() {
     const stored = await chrome.storage.local.get([
       'remotePageUrl',
       'strategy',
-      'peerId'
+      'peerId',
+      'roomSecret'
     ]);
     return {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
       strategy: stored.strategy || defaultConfig.strategy,
-      peerId: stored.peerId || null
+      peerId: stored.peerId || null,
+      roomSecret: stored.roomSecret || null
     };
   }
-  return { ...defaultConfig, peerId: null };
+  return { ...defaultConfig, peerId: null, roomSecret: null };
 }
 
 export async function updateConfig(updates) {
@@ -30,7 +32,8 @@ export async function resetConfig() {
     await chrome.storage.local.remove([
       'remotePageUrl',
       'strategy',
-      'peerId'
+      'peerId',
+      'roomSecret'
     ]);
   }
 }
