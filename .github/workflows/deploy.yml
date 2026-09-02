@@ -1,0 +1,111 @@
+name: Deploy Worker & Update Extension Config
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if Deployment is Needed
+        id: check_deploy
+        run: |
+          EXISTING_URL=$(grep -oE 'remotePageUrl: "[^"]+"' chrome_extension/config.js | cut -d'"' -f2 || true)
+          echo "Existing Remote Page URL: $EXISTING_URL"
+
+          WORKER_ALIVE=false
+          if [ -n "$EXISTING_URL" ]; then
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$EXISTING_URL" || echo "000")
+            echo "Health check HTTP status: $HTTP_STATUS"
+            if [ "$HTTP_STATUS" -eq 200 ]; then
+              WORKER_ALIVE=true
+            fi
+          fi
+
+          REMOTE_CHANGED=false
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            if git diff --name-only HEAD~1 HEAD | grep -q '^remote/'; then
+              REMOTE_CHANGED=true
+            fi
+          else
+            REMOTE_CHANGED=true
+          fi
+          echo "Remote changed: $REMOTE_CHANGED"
+          echo "Worker alive: $WORKER_ALIVE"
+          echo "Event name: ${{ github.event_name }}"
+
+          if [ "$WORKER_ALIVE" = "true" ] && [ "$REMOTE_CHANGED" = "false" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "SKIP_DEPLOY=true" >> "$GITHUB_OUTPUT"
+            echo "Worker is alive and remote/ is unchanged. Skipping deployment."
+          else
+            echo "SKIP_DEPLOY=false" >> "$GITHUB_OUTPUT"
+            echo "Proceeding with deployment."
+          fi
+
+      - name: Setup Node.js
+        if: steps.check_deploy.outputs.SKIP_DEPLOY != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Deploy Cloudflare Worker (Temporary Account)
+        if: steps.check_deploy.outputs.SKIP_DEPLOY != 'true'
+        id: deploy
+        run: |
+          cd remote
+
+          OUTPUT=$(npx wrangler@latest deploy --temporary 2>&1 || true)
+
+          echo "===== WRANGLER OUTPUT ====="
+          echo "$OUTPUT"
+          echo "==========================="
+
+          CLAIM_URL=$(printf '%s\n' "$OUTPUT" |
+            grep -oE 'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^" ]+' |
+            head -n1 || true)
+
+          REMOTE_PAGE_URL=$(printf '%s\n' "$OUTPUT" |
+            grep -oE 'https://[A-Za-z0-9.-]+\.workers\.dev' |
+            head -n1 || true)
+
+          echo "CLAIM_URL=$CLAIM_URL" >> "$GITHUB_ENV"
+          echo "REMOTE_PAGE_URL=$REMOTE_PAGE_URL" >> "$GITHUB_ENV"
+
+          echo "Claim URL: $CLAIM_URL"
+          echo "Remote Page URL: $REMOTE_PAGE_URL"
+
+      - name: Update chrome_extension/config.js
+        if: steps.check_deploy.outputs.SKIP_DEPLOY != 'true'
+        run: |
+          EXPIRES_AT=$(node -e 'console.log(Date.now() + 60 * 60 * 1000)')
+
+          sed -i "s|remotePageUrl: \".*\"|remotePageUrl: \"${REMOTE_PAGE_URL}\"|g" chrome_extension/config.js
+          sed -i "s|claimUrl: \".*\"|claimUrl: \"${CLAIM_URL}\"|g" chrome_extension/config.js
+          sed -i "s|claimExpiresAt: [0-9][0-9]*|claimExpiresAt: ${EXPIRES_AT}|g" chrome_extension/config.js
+
+      - name: Commit and Push Changes
+        if: steps.check_deploy.outputs.SKIP_DEPLOY != 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add chrome_extension/config.js
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "ci: update remote worker page & claim link"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
