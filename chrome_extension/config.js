@@ -1,6 +1,6 @@
-// main 上保持 @main 供开发调试；发布 crx 的地址由 release.yml 构建时替换为发布 tag。
+// main 上保持 /main/ 地址供开发调试；发布 crx 的地址由 release.yml 构建时替换为发布 tag。
 export const defaultConfig = {
-  remotePageUrl: "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@main/remote/public/index.html",
+  remotePageUrl: "https://initialxko.github.io/BilibiliController/main/remote/public/index.html",
   strategy: "mqtt"
 };
 

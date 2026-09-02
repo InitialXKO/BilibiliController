@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
+      administration: write
 
     steps:
       - name: Checkout code
@@ -19,19 +21,74 @@ jobs:
         with:
           node-version: 22
 
+      - name: Enable GitHub Pages if not enabled
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pages" || echo "000")
+          if [ "$STATUS" -eq 404 ]; then
+            echo "Enabling GitHub Pages..."
+            curl -s -X POST \
+              -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/pages" \
+              -d '{"source":{"branch":"gh-pages","path":"/"}}' || true
+          else
+            echo "GitHub Pages is already enabled (status $STATUS)."
+          fi
+
+      - name: Deploy remote shell to gh-pages
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          mkdir -p /tmp/gh-pages-repo
+          cd /tmp/gh-pages-repo
+
+          if git clone --depth 1 --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .; then
+            echo "Cloned existing gh-pages branch."
+          else
+            echo "Initializing new gh-pages branch..."
+            git init -b gh-pages
+            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          fi
+
+          touch .nojekyll
+
+          mkdir -p "${TAG}/remote"
+          mkdir -p "main/remote"
+
+          cp -r "${GITHUB_WORKSPACE}/remote/public" "${TAG}/remote/"
+          cp -r "${GITHUB_WORKSPACE}/remote/public" "main/remote/"
+
+          git add .
+          git commit -m "deploy: update remote shell for release ${TAG}" || echo "No changes to commit"
+          git push origin gh-pages
+
       - name: Pin shell URL to this release tag
         run: |
           TAG="${GITHUB_REF_NAME}"
-          sed -i "s|@main/remote/public/index.html|@${TAG}/remote/public/index.html|" chrome_extension/config.js
-          grep -q "@${TAG}/remote/public/index.html" chrome_extension/config.js \
-            || { echo "::error::替换失败：config.js 中找不到 @main 锚点"; exit 1; }
-          for i in 1 2 3; do
-            curl -fsSL -o /dev/null \
-              "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@${TAG}/remote/public/index.html" \
-              && exit 0
-            sleep 20
+          sed -i "s|/main/remote/public/index.html|/${TAG}/remote/public/index.html|" chrome_extension/config.js
+          grep -q "/${TAG}/remote/public/index.html" chrome_extension/config.js \
+            || { echo "::error::替换失败：config.js 中找不到 /main/ 锚点"; exit 1; }
+
+          URL="https://${{ github.repository_owner }}.github.io/${GITHUB_REPOSITORY#*/}/${TAG}/remote/public/index.html"
+          echo "Checking shell URL: $URL"
+
+          for i in $(seq 1 10); do
+            HTTP_HEADERS=$(curl -fsSL -D - -o /dev/null "$URL" || true)
+            if echo "$HTTP_HEADERS" | grep -qi '^content-type: text/html'; then
+              echo "GitHub Pages verified with content-type: text/html"
+              exit 0
+            fi
+            echo "Attempt $i: Waiting for GitHub Pages deployment & content-type verification..."
+            sleep 30
           done
-          echo "::error::jsDelivr 取不到 ${TAG} 的壳页"; exit 1
+
+          echo "::error::GitHub Pages 页面加载失败或 Content-Type 不是 text/html"
+          exit 1
 
       - name: Build Extension Package
         run: |
