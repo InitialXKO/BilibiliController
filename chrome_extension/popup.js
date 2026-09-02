@@ -5,6 +5,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   refreshUI();
 });
 
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.type === 'offscreen-peer-status' || message.type === 'connection-successful') {
+    refreshUI();
+  }
+});
+
 function setupButtons() {
   document.getElementById('btn-reset').addEventListener('click', async () => {
     if (confirm('确定要重置 Peer ID 吗？这将会生成一个新的连接二维码。')) {

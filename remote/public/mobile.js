@@ -31,11 +31,13 @@ const { peerId, key } = getUrlParams();
 
 if (!peerId) {
   showError('URL 参数中未找到 peerId，请重新在 B站 视频页扫描二维码');
+} else if (!key) {
+  showError('URL 参数中未找到配对口令，请重新在 B站 视频页扫描二维码');
 } else {
   try {
     const trysteroConfig = {
       appId: 'bilibili-remote-control',
-      password: key || undefined,
+      password: key,
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' }

@@ -38,16 +38,16 @@ async function checkBilibiliTab() {
   });
 }
 
+function buildQrUrl(remotePageUrl, currentPeerId, secret) {
+  if (!remotePageUrl || remotePageUrl === '__REMOTE_PAGE_URL__') return null;
+  if (!currentPeerId || !secret) return null;
+  return `${remotePageUrl}?peerId=${encodeURIComponent(currentPeerId)}&key=${encodeURIComponent(secret)}`;
+}
+
 async function notifyTabsAndPopup() {
   const currentConfig = await getConfig();
   const activeSecret = roomSecret || currentConfig.roomSecret;
-  let qrUrl = null;
-  if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
-    qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
-    if (activeSecret) {
-      qrUrl += `&key=${encodeURIComponent(activeSecret)}`;
-    }
-  }
+  const qrUrl = buildQrUrl(currentConfig.remotePageUrl, peerId, activeSecret);
 
   if (connectionState === 'connected') {
     chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
@@ -84,13 +84,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         peerId = currentConfig.peerId;
       }
       const activeSecret = roomSecret || currentConfig.roomSecret;
-      let qrUrl = null;
-      if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
-        qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
-        if (activeSecret) {
-          qrUrl += `&key=${encodeURIComponent(activeSecret)}`;
-        }
-      }
+      const qrUrl = buildQrUrl(currentConfig.remotePageUrl, peerId, activeSecret);
       sendResponse({
         connectionState,
         isBilibili,
