@@ -1,8 +1,8 @@
 export const defaultConfig = {
-  remotePageUrl: "https://bilibili-remote.dust-rail.workers.dev",
-  claimUrl: "https://dash.cloudflare.com/claim-preview?claimToken=vn_KxfXy3EVaUUXzklT3sptNVd2-jXbVWUHSwGEphvM",
+  remotePageUrl: "https://bilibili-remote.resilient-marmoset.workers.dev",
+  claimUrl: "https://dash.cloudflare.com/claim-preview?claimToken=8eZh2r6L_HHrQjWVNstqg1zSgLVnEn7a9Oj9gBRWjZg",
   claimed: false,
-  claimExpiresAt: 1788136603868
+  claimExpiresAt: 1788329450359
 };
 
 export async function getConfig() {
