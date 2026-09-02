@@ -1,7 +1,0 @@
-{
-  "name": "bilibili-remote",
-  "compatibility_date": "2024-09-26",
-  "assets": {
-    "directory": "./public"
-  }
-}

@@ -1,28 +1,25 @@
+// main 上保持 @main 供开发调试；发布 crx 的地址由 release.yml 构建时替换为发布 tag。
 export const defaultConfig = {
-  remotePageUrl: "https://bilibili-remote.dust-rail.workers.dev",
-  claimUrl: "https://dash.cloudflare.com/claim-preview?claimToken=vn_KxfXy3EVaUUXzklT3sptNVd2-jXbVWUHSwGEphvM",
-  claimed: false,
-  claimExpiresAt: 1788136603868
+  remotePageUrl: "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@main/remote/public/index.html",
+  strategy: "mqtt"
 };
 
 export async function getConfig() {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     const stored = await chrome.storage.local.get([
       'remotePageUrl',
-      'claimUrl',
-      'claimed',
-      'claimExpiresAt',
-      'peerId'
+      'strategy',
+      'peerId',
+      'roomSecret'
     ]);
     return {
       remotePageUrl: stored.remotePageUrl || defaultConfig.remotePageUrl,
-      claimUrl: stored.claimUrl || defaultConfig.claimUrl,
-      claimed: stored.claimed !== undefined ? stored.claimed : defaultConfig.claimed,
-      claimExpiresAt: stored.claimExpiresAt || defaultConfig.claimExpiresAt,
-      peerId: stored.peerId || null
+      strategy: stored.strategy || defaultConfig.strategy,
+      peerId: stored.peerId || null,
+      roomSecret: stored.roomSecret || null
     };
   }
-  return { ...defaultConfig, peerId: null };
+  return { ...defaultConfig, peerId: null, roomSecret: null };
 }
 
 export async function updateConfig(updates) {
@@ -35,10 +32,9 @@ export async function resetConfig() {
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
     await chrome.storage.local.remove([
       'remotePageUrl',
-      'claimUrl',
-      'claimed',
-      'claimExpiresAt',
-      'peerId'
+      'strategy',
+      'peerId',
+      'roomSecret'
     ]);
   }
 }

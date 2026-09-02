@@ -2,6 +2,7 @@ import { getConfig } from './config.js';
 
 let connectionState = 'disconnected';
 let peerId = null;
+let roomSecret = null;
 
 // Ensure offscreen document is created
 async function ensureOffscreenDocument() {
@@ -37,12 +38,16 @@ async function checkBilibiliTab() {
   });
 }
 
+function buildQrUrl(remotePageUrl, currentPeerId, secret) {
+  if (!remotePageUrl || remotePageUrl === '__REMOTE_PAGE_URL__') return null;
+  if (!currentPeerId || !secret) return null;
+  return `${remotePageUrl}?peerId=${encodeURIComponent(currentPeerId)}&key=${encodeURIComponent(secret)}`;
+}
+
 async function notifyTabsAndPopup() {
   const currentConfig = await getConfig();
-  let qrUrl = null;
-  if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
-    qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
-  }
+  const activeSecret = roomSecret || currentConfig.roomSecret;
+  const qrUrl = buildQrUrl(currentConfig.remotePageUrl, peerId, activeSecret);
 
   if (connectionState === 'connected') {
     chrome.tabs.query({ url: ["*://*.bilibili.com/video/*", "*://*.bilibili.com/bangumi/play/*"] }, (tabs) => {
@@ -60,6 +65,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'offscreen-peer-status') {
     connectionState = message.connectionState;
     if (message.peerId) peerId = message.peerId;
+    if (message.roomSecret) roomSecret = message.roomSecret;
     notifyTabsAndPopup();
   } else if (message.type === 'connection-successful') {
     connectionState = 'connected';
@@ -77,10 +83,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (!peerId && currentConfig.peerId) {
         peerId = currentConfig.peerId;
       }
-      let qrUrl = null;
-      if (currentConfig.remotePageUrl && currentConfig.remotePageUrl !== '__REMOTE_PAGE_URL__' && peerId) {
-        qrUrl = `${currentConfig.remotePageUrl}?peerId=${encodeURIComponent(peerId)}`;
-      }
+      const activeSecret = roomSecret || currentConfig.roomSecret;
+      const qrUrl = buildQrUrl(currentConfig.remotePageUrl, peerId, activeSecret);
       sendResponse({
         connectionState,
         isBilibili,
@@ -99,7 +103,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === "reinit-peer") {
     chrome.runtime.sendMessage({
       target: 'offscreen',
-      type: 'init-peer'
+      type: 'reinit-peer'
     }, (res) => {
       sendResponse(res);
     });

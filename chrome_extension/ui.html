@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Bilibili Remote</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem;
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    .title {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 2rem;
+      color: #e91e63;
+    }
+
+    .player-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    button {
+      padding: 1rem 1.2rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .primary-btn {
+      background: #ff9800;
+      color: #fff;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    .secondary-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .secondary-controls button {
+      flex: 1;
+      background: #2196f3;
+      color: #fff;
+    }
+
+    .progress-control {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    #progressSlider {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+
+    .skip-controls {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .skip-controls button {
+      flex: 1;
+      background: #4caf50;
+      color: #fff;
+    }
+
+    .media-settings {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .volume-control, .playback-rate-control {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    select {
+      padding: 0.5rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    /* Remote D-Pad */
+    #remote-container {
+      margin-top: 3rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    #dpad {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .dpad-row {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    .remote-btn {
+      padding: 1.2rem;
+      font-size: 1.4rem;
+      background: #607d8b;
+      color: #fff;
+      border-radius: 50%;
+    }
+
+    .btn-enter {
+      background: #ff5722;
+    }
+  </style>
+</head>
+<body>
+  <h1 class="title">Bilibili Remote</h1>
+
+  <div class="player-container">
+    <!-- Main Controls -->
+    <div class="main-controls">
+      <button id="pausePlayBtn" class="primary-btn">▶ Play</button>
+      <div class="secondary-controls">
+        <button id="prevBtn">⏮ Prev</button>
+        <button id="nextBtn">⏭ Next</button>
+        <button id="fullscreenBtn" style="display: none">⛶ Fullscreen</button>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-control">
+      <input type="range" id="progressSlider" min="0" max="100" value="0">
+      <span id="progressLabel">0:00 / 0:00</span>
+    </div>
+
+    <!-- Skip -->
+    <div class="skip-controls">
+      <button id="rewindBtn">⏪ -10s</button>
+      <button id="forwardBtn">⏩ +10s</button>
+    </div>
+
+    <!-- Media Settings -->
+    <div class="media-settings">
+      <div class="volume-control">
+        <label for="volumeSlider">🔊</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="30">
+        <span id="volumeLabel">30%</span>
+      </div>
+      <div class="playback-rate-control">
+        <label for="playbackRate">Speed:</label>
+        <select id="playbackRate">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2x</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remote D-Pad -->
+  <div id="remote-container">
+    <div id="dpad">
+      <div class="dpad-row">
+        <button id="btn-up" class="remote-btn">▲</button>
+      </div>
+      <div class="dpad-row">
+        <button id="btn-left" class="remote-btn">◀</button>
+        <button id="btn-enter" class="remote-btn btn-enter">OK</button>
+        <button id="btn-right" class="remote-btn">▶</button>
+      </div>
+      <div class="dpad-row">
+        <button id="btn-down" class="remote-btn">▼</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      let isDraggingSlider = false;
+
+      function sendCommand(command) {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'remote_command', payload: command }, '*');
+        }
+      }
+
+      window.addEventListener('message', (event) => {
+        if (event.source !== window.parent) return;
+        const message = event.data;
+        if (!message || message.type !== 'bilibili_playing_status') return;
+
+        let status = message.data;
+        if (typeof status === 'string') {
+          try { status = JSON.parse(status); } catch (e) {}
+        }
+        updateUI(status);
+      });
+
+      function updateUI(status) {
+        if (!status) return;
+        const isPlaying = status.paused === false;
+        document.getElementById("pausePlayBtn").innerText = isPlaying ? "⏸ Pause" : "▶ Play";
+
+        const progressSlider = document.getElementById("progressSlider");
+        if (!isDraggingSlider && status.duration) {
+          progressSlider.max = status.duration;
+          progressSlider.value = status.currentTime;
+        }
+
+        function formatTime(seconds) {
+          if (isNaN(seconds) || seconds === undefined) return "0:00";
+          const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+          const s = Math.round(seconds % 60).toString().padStart(2, '0');
+          return `${m}:${s}`;
+        }
+        document.getElementById("progressLabel").innerText = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
+
+        if (status.playbackRate) {
+          document.getElementById("playbackRate").value = status.playbackRate;
+        }
+        if (status.volume !== undefined) {
+          document.getElementById("volumeSlider").value = Math.round(status.volume * 100);
+          document.getElementById("volumeLabel").innerText = `${Math.round(status.volume * 100)}%`;
+        }
+      }
+
+      document.getElementById("prevBtn").addEventListener("click", () => sendCommand({ type: "bilibili_previous" }));
+      document.getElementById("nextBtn").addEventListener("click", () => sendCommand({ type: "bilibili_next" }));
+      document.getElementById("pausePlayBtn").addEventListener("click", () => sendCommand({ type: "bilibili_pause_and_play" }));
+      document.getElementById("fullscreenBtn").addEventListener("click", () => sendCommand({ type: "bilibili_fullscreen" }));
+
+      const progressSlider = document.getElementById("progressSlider");
+      progressSlider.addEventListener("pointerdown", () => { isDraggingSlider = true; });
+      progressSlider.addEventListener("touchstart", () => { isDraggingSlider = true; });
+
+      progressSlider.addEventListener("pointerup", (event) => {
+        isDraggingSlider = false;
+        const newTime = event.target.value;
+        sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
+      });
+      progressSlider.addEventListener("touchend", (event) => {
+        isDraggingSlider = false;
+        const newTime = event.target.value;
+        sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
+      });
+      progressSlider.addEventListener("change", (event) => {
+        isDraggingSlider = false;
+        const newTime = event.target.value;
+        sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
+      });
+
+      document.getElementById("rewindBtn").addEventListener("click", () => {
+        const newTime = Math.max(0, parseFloat(progressSlider.value) - 10);
+        sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: newTime }) });
+      });
+
+      document.getElementById("forwardBtn").addEventListener("click", () => {
+        const newTime = Math.min(parseFloat(progressSlider.max || 100), parseFloat(progressSlider.value) + 10);
+        sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: newTime }) });
+      });
+
+      document.getElementById("playbackRate").addEventListener("change", (event) => {
+        const rate = parseFloat(event.target.value);
+        sendCommand({ type: "update_video_status", data: JSON.stringify({ playbackRate: rate }) });
+      });
+
+      document.getElementById("volumeSlider").addEventListener("input", (event) => {
+        const volume = parseFloat(event.target.value) / 100;
+        document.getElementById("volumeLabel").innerText = `${Math.round(volume * 100)}%`;
+        sendCommand({ type: "update_video_status", data: JSON.stringify({ volume: volume }) });
+      });
+
+      document.querySelectorAll(".remote-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          let command = "ArrowDown";
+          switch (btn.id) {
+            case "btn-up": command = "ArrowUp"; break;
+            case "btn-down": command = "ArrowDown"; break;
+            case "btn-left": command = "ArrowLeft"; break;
+            case "btn-right": command = "ArrowRight"; break;
+            case "btn-enter": command = "Enter"; break;
+          }
+          sendCommand({ type: "remote_control_key", data: command });
+        });
+      });
+
+      // Request status immediately
+      sendCommand({ type: "bilibili_playing_status_request" });
+    })();
+  </script>
+</body>
+</html>

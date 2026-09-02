@@ -1,174 +1,102 @@
-// PeerJS Client Globals
-let peer = null;
-let conn = null;
-let isDraggingSlider = false;
+import { joinRoom } from 'https://cdn.jsdelivr.net/npm/@trystero-p2p/mqtt@0.25.4/+esm';
 
-function getPeerIdFromUrl() {
+function getUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('peerId');
+  return {
+    peerId: urlParams.get('peerId'),
+    key: urlParams.get('key')
+  };
 }
 
-function connectPeerJS() {
-  const targetPeerId = getPeerIdFromUrl();
-  if (!targetPeerId) {
-    console.error('No peerId found in URL parameters.');
-    document.getElementById("progressLabel").innerText = "Error: Missing peerId in URL";
-    return;
-  }
+const statusText = document.getElementById('status-text');
+const errorText = document.getElementById('error-text');
+const spinner = document.getElementById('spinner');
+const retryBtn = document.getElementById('retry-btn');
+const appFrame = document.getElementById('app-frame');
+const loaderContainer = document.getElementById('loader-container');
 
-  peer = new Peer();
-
-  peer.on('open', (id) => {
-    console.log('Mobile PeerJS initialized with ID:', id);
-    console.log('Connecting to extension peer:', targetPeerId);
-    conn = peer.connect(targetPeerId);
-    setupDataConnectionListeners();
-  });
-
-  peer.on('error', (err) => {
-    console.error('Mobile PeerJS error:', err);
-  });
+function showError(msg) {
+  spinner.style.display = 'none';
+  statusText.textContent = '连接失败';
+  errorText.textContent = msg;
+  errorText.style.display = 'block';
+  retryBtn.style.display = 'inline-block';
 }
 
-function setupDataConnectionListeners() {
-  if (!conn) return;
-
-  conn.on('open', () => {
-    console.log('PeerJS DataConnection is open');
-    document.getElementById("progressLabel").innerText = "Connected! Requesting status...";
-  });
-
-  conn.on('close', () => {
-    console.log('PeerJS DataConnection is closed');
-    document.getElementById("progressLabel").innerText = "Disconnected";
-    // Attempt auto reconnect after 3 seconds
-    setTimeout(connectPeerJS, 3000);
-  });
-
-  conn.on('error', (error) => {
-    console.error('PeerJS DataConnection error:', error);
-  });
-
-  conn.on('data', (data) => {
-    let message;
-    try {
-      message = typeof data === 'string' ? JSON.parse(data) : data;
-    } catch (e) {
-      console.error('Failed to parse message:', e);
-      return;
-    }
-
-    if (message.type === "bilibili_playing_status") {
-      updateUI(typeof message.data === 'string' ? JSON.parse(message.data) : message.data);
-    }
-  });
-
-  // Request status periodically
-  setInterval(() => {
-    if (conn && conn.open) {
-      conn.send({ type: "bilibili_playing_status_request" });
-    }
-  }, 500);
+function updateStatus(msg) {
+  statusText.textContent = msg;
 }
 
-function updateUI(status) {
-  if (!status) return;
-  const isPlaying = status.paused === false;
-  document.getElementById("pausePlayBtn").innerText = isPlaying ? "⏸ Pause" : "▶ Play";
+const { peerId, key } = getUrlParams();
 
-  const progressSlider = document.getElementById("progressSlider");
-  if (!isDraggingSlider && status.duration) {
-    progressSlider.max = status.duration;
-    progressSlider.value = status.currentTime;
-  }
+if (!peerId) {
+  showError('URL 参数中未找到 peerId，请重新在 B站 视频页扫描二维码');
+} else if (!key) {
+  showError('URL 参数中未找到配对口令，请重新在 B站 视频页扫描二维码');
+} else {
+  try {
+    const trysteroConfig = {
+      appId: 'bilibili-remote-control',
+      password: key,
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    };
 
-  function formatTime(seconds) {
-    if (isNaN(seconds) || seconds === undefined) return "0:00";
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = Math.round(seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  }
-  document.getElementById("progressLabel").innerText = `${formatTime(status.currentTime)} / ${formatTime(status.duration)}`;
+    updateStatus('正在加入房间...');
+    const room = joinRoom(trysteroConfig, peerId);
 
-  if (status.playbackRate) {
-    document.getElementById("playbackRate").value = status.playbackRate;
-  }
-  if (status.volume !== undefined) {
-    document.getElementById("volumeSlider").value = Math.round(status.volume * 100);
-    document.getElementById("volumeLabel").innerText = `${Math.round(status.volume * 100)}%`;
+    const [sendUi, getUi] = room.makeAction('ui_package');
+    const [sendStatus, getStatus] = room.makeAction('bilibili_status');
+    const [sendCmd, getCmd] = room.makeAction('bilibili_cmd');
+
+    let uiReceived = false;
+
+    getUi((data) => {
+      if (data && data.type === 'ui_html' && data.html) {
+        uiReceived = true;
+        updateStatus('正在渲染 UI...');
+        appFrame.srcdoc = data.html;
+        loaderContainer.style.display = 'none';
+        appFrame.style.display = 'block';
+      }
+    });
+
+    getStatus((data) => {
+      if (appFrame.contentWindow) {
+        appFrame.contentWindow.postMessage({ type: 'bilibili_playing_status', data }, '*');
+      }
+    });
+
+    window.addEventListener('message', (event) => {
+      if (event.source !== appFrame.contentWindow) return;
+      if (event.data && event.data.type === 'remote_command') {
+        sendCmd(event.data.payload);
+      }
+    });
+
+    room.onPeerJoin((peer) => {
+      console.log('Joined room & connected to extension peer:', peer);
+      updateStatus('已连接扩展，正在接收 UI 界面...');
+    });
+
+    room.onPeerLeave((peer) => {
+      console.log('Extension peer left room:', peer);
+      if (!uiReceived) {
+        showError('扩展端已断开连接');
+      }
+    });
+
+    // Timeout fallback after 20 seconds
+    setTimeout(() => {
+      if (!uiReceived) {
+        showError('等待 UI 包超时，请确认口令正确，且电脑端扩展处于激活状态并开启了 B站 视频页');
+      }
+    }, 20000);
+
+  } catch (err) {
+    console.error('Trystero init error:', err);
+    showError('初始化 WebRTC 失败: ' + err.message);
   }
 }
-
-// --- Event Listeners for Controls ---
-function sendCommand(command) {
-  if (conn && conn.open) {
-    conn.send(command);
-  } else {
-    console.warn('PeerJS connection not open, cannot send command.');
-  }
-}
-
-document.getElementById("prevBtn").addEventListener("click", () => sendCommand({ type: "bilibili_previous" }));
-document.getElementById("nextBtn").addEventListener("click", () => sendCommand({ type: "bilibili_next" }));
-document.getElementById("pausePlayBtn").addEventListener("click", () => sendCommand({ type: "bilibili_pause_and_play" }));
-document.getElementById("fullscreenBtn").addEventListener("click", () => sendCommand({ type: "bilibili_fullscreen" }));
-
-const progressSlider = document.getElementById("progressSlider");
-
-// Fix slider dragging bug: flag when user starts dragging and send seek on release
-progressSlider.addEventListener("pointerdown", () => { isDraggingSlider = true; });
-progressSlider.addEventListener("touchstart", () => { isDraggingSlider = true; });
-
-progressSlider.addEventListener("pointerup", (event) => {
-  isDraggingSlider = false;
-  const newTime = event.target.value;
-  sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
-});
-progressSlider.addEventListener("touchend", (event) => {
-  isDraggingSlider = false;
-  const newTime = event.target.value;
-  sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
-});
-progressSlider.addEventListener("change", (event) => {
-  isDraggingSlider = false;
-  const newTime = event.target.value;
-  sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: parseFloat(newTime) }) });
-});
-
-document.getElementById("rewindBtn").addEventListener("click", () => {
-    const newTime = Math.max(0, parseFloat(progressSlider.value) - 10);
-    sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: newTime }) });
-});
-
-document.getElementById("forwardBtn").addEventListener("click", () => {
-    const newTime = Math.min(parseFloat(progressSlider.max || 100), parseFloat(progressSlider.value) + 10);
-    sendCommand({ type: "bilibili_seek", data: JSON.stringify({ time: newTime }) });
-});
-
-document.getElementById("playbackRate").addEventListener("change", (event) => {
-  const rate = parseFloat(event.target.value);
-  sendCommand({ type: "update_video_status", data: JSON.stringify({ playbackRate: rate }) });
-});
-
-document.getElementById("volumeSlider").addEventListener("input", (event) => {
-  const volume = parseFloat(event.target.value) / 100;
-  document.getElementById("volumeLabel").innerText = `${Math.round(volume * 100)}%`;
-  sendCommand({ type: "update_video_status", data: JSON.stringify({ volume: volume }) });
-});
-
-document.querySelectorAll(".remote-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    let command = "ArrowDown"; // Default
-    switch (btn.id) {
-      case "btn-up": command = "ArrowUp"; break;
-      case "btn-down": command = "ArrowDown"; break;
-      case "btn-left": command = "ArrowLeft"; break;
-      case "btn-right": command = "ArrowRight"; break;
-      case "btn-enter": command = "Enter"; break;
-    }
-    sendCommand({ type: "remote_control_key", data: command });
-  });
-});
-
-// Sync mobile.js to chrome_extension/mobile.js for consistency
-connectPeerJS();
