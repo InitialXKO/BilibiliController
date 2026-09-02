@@ -19,11 +19,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: Verify shell URL pinned to this release tag
+      - name: Pin shell URL to this release tag
         run: |
           TAG="${GITHUB_REF_NAME}"
+          sed -i "s|@main/remote/public/index.html|@${TAG}/remote/public/index.html|" chrome_extension/config.js
           grep -q "@${TAG}/remote/public/index.html" chrome_extension/config.js \
-            || { echo "::error::config.js 未钉住 ${TAG}"; exit 1; }
+            || { echo "::error::替换失败：config.js 中找不到 @main 锚点"; exit 1; }
           for i in 1 2 3; do
             curl -fsSL -o /dev/null \
               "https://cdn.jsdelivr.net/gh/InitialXKO/BilibiliController@${TAG}/remote/public/index.html" \
